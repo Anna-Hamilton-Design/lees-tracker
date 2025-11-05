@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lee's Tracker - Job Hunting</title>
+    <link href="https://fonts.googleapis.com/css2?family=Proxima+Nova:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Proxima Nova', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #042D2B 0%, #05ACA9 50%, #D7107B 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(4, 45, 43, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #042D2B 0%, #05ACA9 70%, #D7107B 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 15px;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #05ACA9;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .controls {
+            padding: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #D7107B;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #b00d66;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(215, 16, 123, 0.4);
+        }
+
+        .btn-secondary {
+            background: #BABDB7;
+            color: #042D2B;
+        }
+
+        .btn-secondary:hover {
+            background: #a0a39f;
+        }
+
+        .btn-success {
+            background: #EAEAE8;
+            color: #042D2B;
+        }
+
+        .btn-success:hover {
+            background: #d5d5d3;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #05ACA9;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #05ACA9;
+            color: white;
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-size: 1em;
+        }
+
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: middle;
+            min-height: 50px;
+            height: 50px;
+        }
+
+        tr:hover:not(.editing):not(.new-row) {
+            background: #f0fafa;
+        }
+
+        tr.editing {
+            background: inherit !important;
+        }
+
+        tr.new-row {
+            background: #fef9fb !important;
+        }
+
+        .follow-up-today:not(.editing):not(.new-row) {
+            background: #ffe5e9 !important;
+        }
+
+        .follow-up-tomorrow:not(.editing):not(.new-row) {
+            background: #fef9e5 !important;
+        }
+
+        .follow-up-past:not(.editing):not(.new-row) {
+            background: #ffd6db !important;
+        }
+
+        .follow-up-future:not(.editing):not(.new-row) {
+            background: #e6f9f4 !important;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            min-width: 120px;
+        }
+
+        .btn-small {
+            padding: 10px 10px;
+            font-size: 1.2em;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 45px;
+            height: 45px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-edit {
+            background: #EAEAE8;
+            color: #042D2B;
+        }
+
+        .btn-edit:hover {
+            background: #d5d5d3;
+            transform: scale(1.1);
+        }
+
+        .btn-save {
+            background: #05ACA9;
+            color: white;
+        }
+
+        .btn-save:hover {
+            background: #048784;
+            transform: scale(1.1);
+        }
+
+        .btn-delete {
+            background: #EAEAE8;
+            color: #6c757d;
+        }
+
+        .btn-delete:hover {
+            background: #d5d5d3;
+            color: #F87884;
+            transform: scale(1.1);
+        }
+
+        .btn-cancel {
+            background: #F87884;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background: #e55966;
+            transform: scale(1.1);
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="date"],
+        input[type="url"],
+        textarea {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.95em;
+            background: white;
+            box-sizing: border-box;
+            line-height: 1.4;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 40px;
+            max-height: 80px;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #05ACA9;
+            background: white;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4f4f3;
+            color: #042D2B;
+        }
+
+        .badge-warning {
+            background: #fde6f0;
+            color: #D7107B;
+        }
+
+        .badge-danger {
+            background: #ffe5e9;
+            color: #F87884;
+        }
+
+        .badge-info {
+            background: #e6f9f9;
+            color: #05ACA9;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(4, 45, 43, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            color: white;
+        }
+
+        .loading-spinner .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #05ACA9;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .sync-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #05ACA9;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+        }
+
+        .sync-status.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .stats {
+                flex-direction: column;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Lee's Tracker</h1>
+            <p>Every connection is a step closer to your dream role</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number" id="totalContacts">0</div>
+                <div class="stat-label">Total Contacts</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="todayFollowups">0</div>
+                <div class="stat-label">To Follow Up</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="activeApplications">0</div>
+                <div class="stat-label">Active</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="addNewRow()">
+                ➕ Add New Contact
+            </button>
+            <button class="btn btn-secondary" onclick="exportData()">
+                💾 Export Data
+            </button>
+            <button class="btn btn-success" onclick="importData()">
+                📥 Import Data
+            </button>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Search by name, company, or email..." onkeyup="filterTable()">
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="contactsTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th style="width: 180px;">Contact</th>
+                        <th>Company</th>
+                        <th>First Contact</th>
+                        <th>Nature</th>
+                        <th>Response</th>
+                        <th>Status</th>
+                        <th>Follow-up</th>
+                        <th style="width: 250px;">Link</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📭</div>
+                <h2>No contacts yet</h2>
+                <p>Click "Add New Contact" to get started with your job hunting tracker!</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div>Syncing with Google Sheets...</div>
+        </div>
+    </div>
+
+    <div class="sync-status" id="syncStatus">✓ Synced</div>
+
+    <input type="file" id="importFile" style="display: none;" accept=".json" onchange="handleImport(event)">
+
+    <script>
+        // ⚠️ IMPORTANT: Replace these with YOUR values
+        const SHEET_ID = 'YOUR_SHEET_ID_HERE';
+        const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+        
+        // Google Sheets Configuration
+        const SHEET_NAME = 'Sheet1';
+        
+        let contacts = [];
+        let isLoading = false;
+
+        // Initialize with data from Google Sheets
+        async function initializeData() {
+            if (SHEET_ID === 'YOUR_SHEET_ID_HERE' || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+                alert('⚠️ Please configure your Google Sheet!\n\n1. Set SHEET_ID\n2. Set APPS_SCRIPT_URL\n\nSee GOOGLE_SHEETS_SETUP_GUIDE.md for instructions.');
+                return;
+            }
+            
+            await loadFromGoogleSheets();
+        }
+
+        // Load data from Google Sheets via Apps Script
+        async function loadFromGoogleSheets() {
+            try {
+                showLoading(true);
+                
+                const response = await fetch(APPS_SCRIPT_URL);
+                const data = await response.json();
+                
+                contacts = data.map(row => ({
+                    name: row.Name || '',
+                    email: row.Contact || '',
+                    company: row.Company || '',
+                    dateContact: row['First Contact'] || '',
+                    nature: row.Nature || '',
+                    response: row.Response || '',
+                    status: row.Status || '',
+                    followupDate: row['Follow-up'] || '',
+                    jobPostLink: row.Link || '',
+                    notes: row.Notes || ''
+                }));
+                
+                renderTable();
+                updateStats();
+                showSyncStatus('✓ Data loaded from Google Sheets');
+            } catch (error) {
+                console.error('Error loading from Google Sheets:', error);
+                alert('Error loading data. Please check:\n1. Sheet ID and Apps Script URL are correct\n2. Apps Script is deployed as Web App\n3. You have internet connection');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Save data to Google Sheets via Apps Script
+        async function saveToGoogleSheets() {
+            try {
+                showLoading(true);
+                
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(contacts)
+                });
+                
+                showSyncStatus('✓ Synced to Google Sheets');
+                
+            } catch (error) {
+                console.error('Error saving to Google Sheets:', error);
+                showSyncStatus('⚠️ Sync failed - check console');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('active', show);
+        }
+
+        function showSyncStatus(message) {
+            const status = document.getElementById('syncStatus');
+            status.textContent = message;
+            status.classList.add('show');
+            setTimeout(() => status.classList.remove('show'), 3000);
+        }
+
+        function saveToStorage() {
+            // Keep localStorage as backup
+            localStorage.setItem('jobContacts', JSON.stringify(contacts));
+            // Also trigger Google Sheets save
+            saveToGoogleSheets();
+        }
+
+        function addNewRow() {
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+            emptyState.style.display = 'none';
+            
+            const today = new Date().toISOString().split('T')[0];
+            
+            const newRow = tbody.insertRow(0);
+            newRow.classList.add('new-row', 'editing');
+            newRow.dataset.index = -1;
+            
+            newRow.innerHTML = `
+                <td><input type="text" id="new-name" placeholder="Name"></td>
+                <td style="width: 180px;"><input type="text" id="new-email" placeholder="Email or Phone"></td>
+                <td><input type="text" id="new-company" placeholder="Company"></td>
+                <td><input type="date" id="new-dateContact" value="${today}"></td>
+                <td><input type="text" id="new-nature" placeholder="Nature of contact"></td>
+                <td><input type="text" id="new-response" placeholder="Response received"></td>
+                <td><input type="text" id="new-status" placeholder="Current status"></td>
+                <td><input type="date" id="new-followupDate"></td>
+                <td style="width: 250px;"><input type="url" id="new-jobPostLink" placeholder="https://..."></td>
+                <td><textarea id="new-notes" placeholder="Notes"></textarea></td>
+                <td class="actions">
+                    <button class="btn-small btn-save" onclick="saveNewRow(this)" title="Save">💾</button>
+                    <button class="btn-small btn-cancel" onclick="cancelNewRow(this)" title="Cancel">✖️</button>
+                </td>
+            `;
+            
+            document.getElementById('new-name').focus();
+        }
+
+        function saveNewRow(button) {
+            const contact = {
+                name: document.getElementById('new-name').value.trim(),
+                email: document.getElementById('new-email').value.trim(),
+                company: document.getElementById('new-company').value.trim(),
+                dateContact: document.getElementById('new-dateContact').value,
+                nature: document.getElementById('new-nature').value.trim(),
+                response: document.getElementById('new-response').value.trim(),
+                status: document.getElementById('new-status').value.trim(),
+                followupDate: document.getElementById('new-followupDate').value,
+                jobPostLink: document.getElementById('new-jobPostLink').value.trim(),
+                notes: document.getElementById('new-notes').value.trim()
+            };
+            
+            contacts.unshift(contact);
+            saveToStorage();
+            renderTable();
+            updateStats();
+        }
+
+        function cancelNewRow(button) {
+            const row = button.closest('tr');
+            row.remove();
+            if (contacts.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+            }
+        }
+
+        function editRow(index) {
+            const row = document.querySelector(`tr[data-index="${index}"]`);
+            const contact = contacts[index];
+            
+            row.classList.add('editing');
+            
+            row.innerHTML = `
+                <td><input type="text" id="edit-name-${index}" value="${contact.name}"></td>
+                <td style="width: 180px;"><input type="text" id="edit-email-${index}" value="${contact.email}"></td>
+                <td><input type="text" id="edit-company-${index}" value="${contact.company}"></td>
+                <td><input type="date" id="edit-dateContact-${index}" value="${contact.dateContact}"></td>
+                <td><input type="text" id="edit-nature-${index}" value="${contact.nature}"></td>
+                <td><input type="text" id="edit-response-${index}" value="${contact.response}"></td>
+                <td><input type="text" id="edit-status-${index}" value="${contact.status}"></td>
+                <td><input type="date" id="edit-followupDate-${index}" value="${contact.followupDate}"></td>
+                <td style="width: 250px;"><input type="url" id="edit-jobPostLink-${index}" value="${contact.jobPostLink || ''}"></td>
+                <td><textarea id="edit-notes-${index}">${contact.notes}</textarea></td>
+                <td class="actions">
+                    <button class="btn-small btn-save" onclick="saveEdit(${index})" title="Save">💾</button>
+                    <button class="btn-small btn-cancel" onclick="cancelEdit(${index})" title="Cancel">✖️</button>
+                </td>
+            `;
+        }
+
+        function saveEdit(index) {
+            contacts[index] = {
+                name: document.getElementById(`edit-name-${index}`).value.trim(),
+                email: document.getElementById(`edit-email-${index}`).value.trim(),
+                company: document.getElementById(`edit-company-${index}`).value.trim(),
+                dateContact: document.getElementById(`edit-dateContact-${index}`).value,
+                nature: document.getElementById(`edit-nature-${index}`).value.trim(),
+                response: document.getElementById(`edit-response-${index}`).value.trim(),
+                status: document.getElementById(`edit-status-${index}`).value.trim(),
+                followupDate: document.getElementById(`edit-followupDate-${index}`).value,
+                jobPostLink: document.getElementById(`edit-jobPostLink-${index}`).value.trim(),
+                notes: document.getElementById(`edit-notes-${index}`).value.trim()
+            };
+            
+            saveToStorage();
+            renderTable();
+            updateStats();
+        }
+
+        function cancelEdit(index) {
+            renderTable();
+        }
+
+        function deleteContact(index) {
+            if (confirm('Are you sure you want to delete this contact?')) {
+                contacts.splice(index, 1);
+                saveToStorage();
+                renderTable();
+                updateStats();
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (contacts.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            tbody.innerHTML = contacts.map((contact, index) => {
+                const rowClass = getFollowUpClass(contact.followupDate);
+                const followupBadge = getFollowUpBadge(contact.followupDate);
+                const jobLink = contact.jobPostLink ? 
+                    `<a href="${contact.jobPostLink}" target="_blank" style="color: #05ACA9; text-decoration: none; font-weight: 600;">🔗 View Job</a>` : 
+                    '-';
+                
+                return `
+                    <tr class="${rowClass}" data-index="${index}">
+                        <td><strong>${contact.name}</strong></td>
+                        <td style="font-size: 0.9em; width: 180px;">${contact.email}</td>
+                        <td>${contact.company}</td>
+                        <td>${formatDate(contact.dateContact)}</td>
+                        <td>${contact.nature || '-'}</td>
+                        <td>${contact.response || '-'}</td>
+                        <td>${contact.status || '-'}</td>
+                        <td>${followupBadge}</td>
+                        <td style="width: 250px;">${jobLink}</td>
+                        <td>${contact.notes || '-'}</td>
+                        <td class="actions">
+                            <button class="btn-small btn-edit" onclick="editRow(${index})" title="Edit">✏️</button>
+                            <button class="btn-small btn-delete" onclick="deleteContact(${index})" title="Delete">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getFollowUpClass(date) {
+            if (!date) return '';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const followup = new Date(date);
+            followup.setHours(0, 0, 0, 0);
+            
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            if (followup < today) return 'follow-up-past';
+            if (followup.getTime() === today.getTime()) return 'follow-up-today';
+            if (followup.getTime() === tomorrow.getTime()) return 'follow-up-tomorrow';
+            if (followup > tomorrow) return 'follow-up-future';
+            
+            return '';
+        }
+
+        function getFollowUpBadge(date) {
+            if (!date) return '-';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const followup = new Date(date);
+            followup.setHours(0, 0, 0, 0);
+            
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const formattedDate = formatDate(date);
+            
+            if (followup < today) return `<span class="badge badge-danger">⚠️ ${formattedDate}</span>`;
+            if (followup.getTime() === today.getTime()) return `<span class="badge badge-danger">🔴 TODAY</span>`;
+            if (followup.getTime() === tomorrow.getTime()) return `<span class="badge badge-warning">🟡 TOMORROW</span>`;
+            if (followup > tomorrow) return `<span class="badge badge-success">🟢 ${formattedDate}</span>`;
+            
+            return `<span class="badge badge-info">${formattedDate}</span>`;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        }
+
+        function updateStats() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const toFollowUp = contacts.filter(c => {
+                if (!c.followupDate) return false;
+                const followup = new Date(c.followupDate);
+                followup.setHours(0, 0, 0, 0);
+                return followup >= today;
+            }).length;
+            
+            const activeApplications = contacts.filter(c => 
+                c.status && !c.status.toLowerCase().includes('not willing') && !c.status.toLowerCase().includes('rejected')
+            ).length;
+            
+            document.getElementById('totalContacts').textContent = contacts.length;
+            document.getElementById('todayFollowups').textContent = toFollowUp;
+            document.getElementById('activeApplications').textContent = activeApplications;
+        }
+
+        function filterTable() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#tableBody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        function exportData() {
+            // Prepare data for Excel
+            const excelData = contacts.map(contact => ({
+                'Name': contact.name,
+                'Contact': contact.email,
+                'Company': contact.company,
+                'First Contact': formatDate(contact.dateContact),
+                'Nature of Contact': contact.nature,
+                'Response Received': contact.response,
+                'Current Status': contact.status,
+                'Follow-up Date': formatDate(contact.followupDate),
+                'Link': contact.jobPostLink || '',
+                'Notes': contact.notes
+            }));
+            
+            // Create workbook and worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            
+            // Set column widths - adjusted for new layout
+            ws['!cols'] = [
+                { wch: 25 },  // Name
+                { wch: 20 },  // Contact (smaller)
+                { wch: 25 },  // Company
+                { wch: 15 },  // First Contact
+                { wch: 30 },  // Nature
+                { wch: 35 },  // Response (more space)
+                { wch: 40 },  // Status
+                { wch: 15 },  // Follow-up
+                { wch: 60 },  // Link (wider)
+                { wch: 45 }   // Notes (more space)
+            ];
+            
+            // Add worksheet to workbook
+            XLSX.utils.book_append_sheet(wb, ws, "Contacts");
+            
+            // Generate filename with date
+            const filename = `Lees-Tracker-${new Date().toISOString().split('T')[0]}.xlsx`;
+            
+            // Save file
+            XLSX.writeFile(wb, filename);
+        }
+
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (confirm(`Import ${imported.length} contacts? This will replace your current data.`)) {
+                        contacts = imported;
+                        saveToStorage();
+                        renderTable();
+                        updateStats();
+                    }
+                } catch (error) {
+                    alert('Error importing file. Please make sure it\'s a valid JSON file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Initialize on page load
+        initializeData();
+    </script>
+</body>
+</html>
