@@ -479,9 +479,9 @@
     <input type="file" id="importFile" style="display: none;" accept=".json" onchange="handleImport(event)">
 
     <script>
-        // ⚠️ IMPORTANT: Replace these with YOUR values
-        const SHEET_ID = 'YOUR_SHEET_ID_HERE';
-        const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+        // Google Sheets Configuration - Already set up for you!
+        const SHEET_ID = '1FpPz24C4sTqf3SnYqb14tioTtsDYTY78i019hFUzuJk';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxmvMBlOmM62XOYBb6gPptKHV7U6S9jWIuNLXiwZvZMLNAZ7iqiRiVokBCOr8LNlVPFEQ/exec';
         
         // Google Sheets Configuration
         const SHEET_NAME = 'Sheet1';
@@ -491,11 +491,6 @@
 
         // Initialize with data from Google Sheets
         async function initializeData() {
-            if (SHEET_ID === 'YOUR_SHEET_ID_HERE' || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
-                alert('⚠️ Please configure your Google Sheet!\n\n1. Set SHEET_ID\n2. Set APPS_SCRIPT_URL\n\nSee GOOGLE_SHEETS_SETUP_GUIDE.md for instructions.');
-                return;
-            }
-            
             await loadFromGoogleSheets();
         }
 
