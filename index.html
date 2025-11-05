@@ -151,8 +151,8 @@
         }
 
         th {
-            background: #05ACA9;
-            color: white;
+            background: #BABDB7;
+            color: #042D2B;
             padding: 15px 10px;
             text-align: left;
             font-weight: 600;
@@ -431,9 +431,6 @@
             <button class="btn btn-secondary" onclick="exportData()">
                 💾 Export Data
             </button>
-            <button class="btn btn-success" onclick="importData()">
-                📥 Import Data
-            </button>
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="🔍 Search by name, company, or email..." onkeyup="filterTable()">
             </div>
@@ -476,8 +473,6 @@
 
     <div class="sync-status" id="syncStatus">✓ Synced</div>
 
-    <input type="file" id="importFile" style="display: none;" accept=".json" onchange="handleImport(event)">
-
     <script>
         // Google Sheets Configuration - Already set up for you!
         const SHEET_ID = '1FpPz24C4sTqf3SnYqb14tioTtsDYTY78i019hFUzuJk';
@@ -506,11 +501,11 @@
                     name: row.Name || '',
                     email: row.Contact || '',
                     company: row.Company || '',
-                    dateContact: row['First Contact'] || '',
+                    dateContact: formatDateFromSheet(row['First Contact']),
                     nature: row.Nature || '',
                     response: row.Response || '',
                     status: row.Status || '',
-                    followupDate: row['Follow-up'] || '',
+                    followupDate: formatDateFromSheet(row['Follow-up']),
                     jobPostLink: row.Link || '',
                     notes: row.Notes || ''
                 }));
@@ -524,6 +519,43 @@
             } finally {
                 showLoading(false);
             }
+        }
+
+        // Format date from Google Sheets to YYYY-MM-DD format
+        function formatDateFromSheet(dateValue) {
+            if (!dateValue || dateValue === '-' || dateValue === '') return '';
+            
+            // If it's already in YYYY-MM-DD format
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                return dateValue;
+            }
+            
+            // If it's in DD/MM/YY or DD/MM/YYYY format
+            if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(dateValue)) {
+                const parts = dateValue.split('/');
+                const day = parts[0].padStart(2, '0');
+                const month = parts[1].padStart(2, '0');
+                let year = parts[2];
+                if (year.length === 2) {
+                    year = '20' + year;
+                }
+                return `${year}-${month}-${day}`;
+            }
+            
+            // If it's a date object or timestamp, parse it
+            try {
+                const date = new Date(dateValue);
+                if (!isNaN(date.getTime())) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+            } catch (e) {
+                console.error('Date parsing error:', e);
+            }
+            
+            return '';
         }
 
         // Save data to Google Sheets via Apps Script
@@ -699,8 +731,8 @@
                 const rowClass = getFollowUpClass(contact.followupDate);
                 const followupBadge = getFollowUpBadge(contact.followupDate);
                 const jobLink = contact.jobPostLink ? 
-                    `<a href="${contact.jobPostLink}" target="_blank" style="color: #05ACA9; text-decoration: none; font-weight: 600;">🔗 View Job</a>` : 
-                    '-';
+                    `<a href="${contact.jobPostLink}" target="_blank" style="color: #05ACA9; text-decoration: none; font-weight: 600;">🔗 view link</a>` : 
+                    '';
                 
                 return `
                     <tr class="${rowClass}" data-index="${index}">
@@ -708,12 +740,12 @@
                         <td style="font-size: 0.9em; width: 180px;">${contact.email}</td>
                         <td>${contact.company}</td>
                         <td>${formatDate(contact.dateContact)}</td>
-                        <td>${contact.nature || '-'}</td>
-                        <td>${contact.response || '-'}</td>
-                        <td>${contact.status || '-'}</td>
+                        <td>${contact.nature || ''}</td>
+                        <td>${contact.response || ''}</td>
+                        <td>${contact.status || ''}</td>
                         <td>${followupBadge}</td>
                         <td style="width: 250px;">${jobLink}</td>
-                        <td>${contact.notes || '-'}</td>
+                        <td>${contact.notes || ''}</td>
                         <td class="actions">
                             <button class="btn-small btn-edit" onclick="editRow(${index})" title="Edit">✏️</button>
                             <button class="btn-small btn-delete" onclick="deleteContact(${index})" title="Delete">🗑️</button>
@@ -744,7 +776,7 @@
         }
 
         function getFollowUpBadge(date) {
-            if (!date) return '-';
+            if (!date) return '';
             
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -766,8 +798,9 @@
         }
 
         function formatDate(dateString) {
-            if (!dateString) return '-';
+            if (!dateString) return '';
             const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '';
             return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
         }
 
@@ -842,31 +875,6 @@
             
             // Save file
             XLSX.writeFile(wb, filename);
-        }
-
-        function importData() {
-            document.getElementById('importFile').click();
-        }
-
-        function handleImport(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    if (confirm(`Import ${imported.length} contacts? This will replace your current data.`)) {
-                        contacts = imported;
-                        saveToStorage();
-                        renderTable();
-                        updateStats();
-                    }
-                } catch (error) {
-                    alert('Error importing file. Please make sure it\'s a valid JSON file.');
-                }
-            };
-            reader.readAsText(file);
         }
 
         // Initialize on page load
